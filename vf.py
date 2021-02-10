@@ -142,7 +142,7 @@ class DiffRootVector(Vector):
 ## FUNC1 = y; func2= -x - some resitance term gives simple harmonic motion of a spring
 ## YOU CAN interpret any position on the 2d plane as the x coordinate being ur deviation from the mean position
 ## your y coordinate being your velocity at the point so if i increase the resistance term I'll see the
-# vectors go down quickly; Also I could have just as easily done this with complex numbers, which would have been equally cool(or more actually).
+# vectors go down quickly;
 
 ##THE OTHER EQUATION IS THE ACCELERATION FOR A PENDULUM; It's from differential equations it's pretty cool
 
@@ -219,26 +219,12 @@ if __name__ == '__main__':
 	go()
 	myBoid = Boid()
 	myBoid.pos = Vector(w//2+60, h//2)
-	# myBoid.applyForce(Vector(100,100))
-	print(myBoid.acc)
-	print(len(vectors),(((w//spacing))*((h//spacing))),w//spacing,h//spacing)
-	VectorsOnY = (h//spacing)+1 if h%spacing != 0 else h//spacing
-	# print(vectors[(8*VectorsOnY)+2],vectors[(8*VectorsOnY)+2].angle,vectors[(8*VectorsOnY)+2].root)
-	# sys.exit()
 	animation = 0
 	ps = [particle(Vector(random.randint(0,w),random.randint(0,h)),Vector(0,0),Vector(0,0),maxTrail =0) 
 			for i in range(500)]
-	# ps = [particle(Vector(w//2+60,h//2),Vector(0,0),Vector(0,0),maxTrail =0)]
 	while run:
-		# screen.fill((0,0,0))
-		# flow(myBoid)
-		#flow(p)
 		for p in ps:
 			flow(p);p.update(screen,.2);p.update(screen,.2);p.vel = Vector(0,0)
-		# myBoid.update(screen,.2);myBoid.draw(screen)
-		# myBoid.update(screen,.2)
-		# myBoid.vel = Vector(0,0)
-		#print(myBoid.acc,myBoid.vel);sys.exit()
 		if animation:
 			go1()
 			animation= False
