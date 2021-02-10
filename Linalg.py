@@ -107,7 +107,6 @@ class Vector():
         return Vector(1,0)
 
 
-## I PROBABLY SHOULD MAKE THIS COMPATIBLE WITH NUMPY..
 class Matrix():
     def __init__(self,twoDList):
         self.mat = []
@@ -122,7 +121,4 @@ class Matrix():
         return f'MATRIX {self.mat}'
     def __getitem__(self,i):
         return self.mat[i]
-    
-    def inv(self):
-        return np.linalg.inv(self.npMAT)
 
