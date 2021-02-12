@@ -197,7 +197,7 @@ def go1():
 			pygame.display.update()
 			CheckEvent()
 
-def flow(boid):
+def flow(boid,colored):
 	global spacing,vectors
 	x,y = boid.pos.x,boid.pos.y
 	x,y = int(x//spacing), int(y//spacing)
@@ -209,22 +209,20 @@ def flow(boid):
 		acc = Vector(force.x,force.y)
 		acc = acc.SetMag(force.origMag*2)
 		boid.applyForce(acc)
-		boid.c = (force.r,0,force.b) ## set the color to the vector's color
-		boid.c = (51,51,51) ## or just yk gray 
+		boid.c = (force.r,0,force.b) if colored else (51,51,51) ## set the color to the vector's color or jus gray		
 	except:
 		boid.c = (51,51,51)
 
 
 if __name__ == '__main__':
 	go()
-	myBoid = Boid()
-	myBoid.pos = Vector(w//2+60, h//2)
 	animation = 0
+	colored = False
 	ps = [particle(Vector(random.randint(0,w),random.randint(0,h)),Vector(0,0),Vector(0,0),maxTrail =0) 
 			for i in range(500)]
 	while run:
 		for p in ps:
-			flow(p);p.update(screen,.2);p.update(screen,.2);p.vel = Vector(0,0)
+			flow(p,colored);p.update(screen,.2);p.update(screen,.2);p.vel = Vector(0,0)
 		if animation:
 			go1()
 			animation= False
