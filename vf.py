@@ -88,9 +88,8 @@ class particle:
 class DiffRootVector(Vector):
 	## ROOT IS A VECTOR
 	def __init__(self,root,x,y,angle=0):
+		super().__init__(x,y)
 		self.root = root
-		self.x = x
-		self.y = y
 		self.angle = math.degrees(math.atan((self.y)/self.x)) if self.x != 0 else 0
 		self.angle = self.angle if angle == 0 else angle
 		self.origMag = self.GetMagnitude()
