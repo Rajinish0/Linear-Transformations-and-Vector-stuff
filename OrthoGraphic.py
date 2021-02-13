@@ -13,7 +13,7 @@ orthographicProj = Matrix([[1,0,0],
 			   [0,1,0]])
 
 def GetCube():
-	Vertices = [Vector(-50,-50,50),
+	Vertices = [		Vector(-50,-50,50),
 				Vector(50,-50,50),
 				Vector(50,50,50),
 				Vector(-50,50,50),
@@ -51,8 +51,8 @@ while run:
 	screen.fill((0,0,0))
 	RotatedCube = [v.RotationX(angle,Center) for v in Cube]
 	RotatedCube = [v.RotationZ(angle,Center) for v in RotatedCube]
-	orthographicProjs = [Matrix([[(1+(.5-r.z/3)/100),0,0],						## NAIVE ATTEMPT TO MODEL PRESPECTIVE PROJECTIONS
-						  [0,(1+(.5-r.z/3)/100),0]]) for r in RotatedCube]
+	orthographicProjs = [Matrix([[(1-(.5-r.z/3)/100),0,0],						## NAIVE ATTEMPT TO MODEL PRESPECTIVE PROJECTIONS
+						  [0,(1-(.5-r.z/3)/100),0]]) for r in RotatedCube]
 	projs = [v.applyTransformation(orthographicProjs[i]) for i,v in enumerate(RotatedCube)]
 	[pygame.draw.circle(screen,(255,255,255), (int(w//2+proj.x),int(h//2+proj.y)),4) for proj in projs]
 	angle -= .2
