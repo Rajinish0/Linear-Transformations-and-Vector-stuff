@@ -1,4 +1,4 @@
-import math
+import math,copy
 import numpy as np
 from functools import reduce
 
@@ -15,7 +15,7 @@ class Vector():
     @property
     def z(self):
         return self.elems[2]
-     
+
 
     @x.setter
     def x(self,val):
@@ -28,13 +28,14 @@ class Vector():
         self.elems[2] = val
 
 
+
     def normalized(self):
         magnitude = self.GetMagnitude()
         if not magnitude == 0:
             args = [(elem/magnitude) for elem in self.elems]
             return Vector(*args)
         else:
-            return Vector(0,0)            
+            return self            
 
     def __repr__(self):
         return ('Vector {}'.format(self.elems))
@@ -57,7 +58,7 @@ class Vector():
     def applyTransformation(self,mat):
         if not isinstance(mat,Matrix):
             raise Exception('ffs man')
-        return reduce(lambda x,y :x+y,[self[i]*mat[i] for i in range(len(self))])
+        return (reduce(lambda x,y :x+y,[(mat[i]*self[i]) for i in range(len(self))]))
 
 
     def elem_product(self,b):
@@ -67,6 +68,7 @@ class Vector():
 
 
     def dot(self,b):
+        print(self,b)
         return reduce(lambda x,y :x+y,[self[i]*b[i] for i in range(len(self))])
 
 
@@ -79,6 +81,7 @@ class Vector():
         norm = self.normalized()
         return np.angle(np.array([complex(norm.x,norm.y)]),deg)[0]
 
+    ##2D rotation
     def rotate(self,center,angle):
         '''can define a rotation matrix for this um [[cosx, -sinx],
                                                      [sinx,cosx]] * [[x]]
@@ -91,6 +94,47 @@ class Vector():
         transformation = self.applyTransformation(rotationMatrix)
         self.elems = [center[i]+transformation[i] for i in range(len(self))]
         return self
+
+
+    def RotationOnX(self,angle):
+        m = Matrix([[1,0,0],
+                [0,math.cos(math.radians(angle)),-math.sin(math.radians(angle))],
+                [0,math.sin(math.radians(angle)),math.cos(math.radians(angle))]])
+        return m
+    def RotationOnY(self,angle):
+        m = Matrix([
+                [math.cos(math.radians(angle)),0,-math.sin(math.radians(angle))],
+                [1,0,0],
+                [math.sin(math.radians(angle)),0,math.cos(math.radians(angle))]
+                ])  
+        return m
+    def RotationOnZ(self,angle):
+        m = Matrix([
+                [math.cos(math.radians(angle)),-math.sin(math.radians(angle)),0],
+                [math.sin(math.radians(angle)),math.cos(math.radians(angle)),0],
+                [0,0,1]
+                ])
+        return m
+
+    ##3D rotations
+    def RotationX(self,angle,center,return_new=True):
+        return self.Gen3dRotation(self.RotationOnX(angle),center,return_new)
+    def RotationY(self,angle,center,return_new=True):
+        return self.Gen3dRotation(self.RotationOnY(angle),center,return_new)
+    def RotationZ(self,angle,center,return_new=True):
+        return self.Gen3dRotation(self.RotationOnZ(angle),center,return_new)
+
+    def Gen3dRotation(self,mat,center,return_new = True):
+        origElems = copy.copy(self.elems)
+        self.elems = [self[i]-center[i] for i in range(len(self))]
+        transformation = self.applyTransformation(mat)
+        self.elems = [center[i]+transformation[i] for i in range(len(self))]
+        rotated = self.elems
+        self.elems = origElems if return_new else self.elems
+        return self if not return_new else Vector(*rotated)
+
+
+
     def GetMagnitude(self):
         return math.sqrt(sum([pow(elem,2) for elem in self.elems]))
 
@@ -99,8 +143,10 @@ class Vector():
             return self.dot(b)
         return Vector(*[self[i]*scl for i in range(len(self))])
 
+    def __rmul__(self,scl):
+        return self.__mul__(scl)
+    #__rmul__= __mul__
 
-    __rmul__= __mul__
 
 
     def __truediv__(self,scl):
@@ -137,10 +183,14 @@ class Matrix():
         validLen = len(twoDList[0])
         self.npMAT = np.array(twoDList)
         twoDList= [list(x) for x in np.array(twoDList).T]
+        prev = None
         for each in twoDList:
-            if len(each) != validLen:
-                raise Exception('You know the drill')
-            self.mat.append(Vector(*each))
+            if prev is not None and len(each) != len(prev):
+                raise Exception('dims don\'t match {}d and {}d'.format(len(prev),len(each)))
+            v = Vector(*each)
+            self.mat.append(v)
+            prev = v
+
     def __repr__(self):
         return f'MATRIX {self.mat}'
     def __getitem__(self,i):
