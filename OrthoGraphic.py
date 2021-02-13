@@ -10,7 +10,7 @@ angleTurn = 10
 angle = 0
 deltaTime = 1/frameRate
 orthographicProj = Matrix([[1,0,0],
-						  [0,1,0]])
+			   [0,1,0]])
 
 def GetCube():
 	Vertices = [Vector(-50,-50,50),
