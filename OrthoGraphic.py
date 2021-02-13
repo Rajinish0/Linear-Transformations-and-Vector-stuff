@@ -1,5 +1,5 @@
 import pygame,random,math,time,copy
-from seein import Vector, Matrix
+from Linalg import Vector, Matrix
 run = True
 w,h = 900,480
 clock = pygame.time.Clock()
