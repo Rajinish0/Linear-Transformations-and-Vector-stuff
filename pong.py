@@ -1,6 +1,6 @@
 import pygame,copy,math,random
 from pygame.locals import *
-from Linalg import Vector,Matrix
+from seein import Vector,Matrix
 pygame.init()
 clock = pygame.time.Clock()
 frameRate = 60
@@ -8,7 +8,7 @@ deltaTime = 1/frameRate
 w,h = 700,480
 screen = pygame.display.set_mode((w,h))
 gravity = Vector(0,9.8)
-postImpactVelocity = 450
+postImpactVelocity = 400
 
 class particle:
     def __init__(self,pos,vel=None,acc=None,magnitude=None,dampeningAffect = 1,mass=1):
@@ -18,7 +18,7 @@ class particle:
         self.damp = dampeningAffect
         self.trail = []
         self.maxTrail = 3
-        self.speed = 200
+        self.speed = 400
         self.mass=mass
         self.radius = 4
     def update(self,screen):
@@ -78,10 +78,26 @@ class Plank:
             
     @staticmethod
     def constrain(cur,total,maximum):
-        print(cur/total)
         return ((cur*abs(maximum)*2)/total)-maximum
-
     
+    ## PREDICT COLLISION POINT AND MOVE THERE
+    def GetContactCoords(self,ball):
+        distFromBall = self.pos.x - ball.pos.x
+        T = distFromBall/(ball.velocity.x*ball.speed*deltaTime)
+        DistOnY = ball.velocity.y*ball.speed*deltaTime * T
+        ContactCoord = DistOnY + ball.pos.y;
+        c = (255,0,0) if self.right else (0,255,0)
+        x = w-self.w if self.right else self.w
+        pygame.draw.circle(screen,c,(x,int(ContactCoord)),3)
+        
+        ##(self.pos - collisionPointVector).normalized().y could have probably worked for changing dir..
+        if (ball.velocity.x < 0 and not self.right) or (ball.velocity.x > 0 and self.right):
+            if ContactCoord - (self.pos.y+self.h//2) > self.h//2:
+                self.chdir(1)
+            elif ContactCoord - (self.pos.y+self.h//2) < -self.h//2:
+                self.chdir(-1)    
+
+    ## FIXING THE ANGLE
     def DoTheStuff(self,ball,left):
         center=Vector(0,0)
         ball.speed = postImpactVelocity
@@ -117,7 +133,7 @@ class Plank:
         
 run = True
 initPos = Vector(w//2,h//2)
-initVel = Vector(300,-80)
+initVel = Vector(400,-100)
 initacc = Vector(0,0)
 myParticle = particle(initPos, initVel, initacc,initVel.GetMagnitude())
 leftPlank = Plank(Vector(0,(h//2)-60//2))
@@ -127,6 +143,8 @@ while run:
     screen.fill((100,0,100))
     leftPlank.update(screen)
     rightPlank.update(screen)
+    rightPlank.GetContactCoords(myParticle)
+    leftPlank.GetContactCoords(myParticle)
     leftPlank.CheckCollision(myParticle)
     rightPlank.CheckCollision(myParticle,False)
     roundOver= myParticle.CheckCollisions()
