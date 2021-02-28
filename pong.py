@@ -83,14 +83,13 @@ class Plank:
     ## PREDICT COLLISION POINT AND MOVE THERE
     def GetContactCoords(self,ball):
         distFromBall = self.pos.x - ball.pos.x
-        T = distFromBall/(ball.velocity.x*ball.speed*deltaTime)
-        DistOnY = ball.velocity.y*ball.speed*deltaTime * T
+        T = distFromBall/(ball.velocity.x*ball.speed)
+        DistOnY = ball.velocity.y*ball.speed*T
         ContactCoord = DistOnY + ball.pos.y;
         c = (255,0,0) if self.right else (0,255,0)
         x = w-self.w if self.right else self.w
         pygame.draw.circle(screen,c,(x,int(ContactCoord)),3)
         
-        ##(self.pos - collisionPointVector).normalized().y could have probably worked for changing dir..
         if (ball.velocity.x < 0 and not self.right) or (ball.velocity.x > 0 and self.right):
             if ContactCoord - (self.pos.y+self.h//2) > self.h//2:
                 self.chdir(1)
