@@ -1,6 +1,6 @@
 #from exp import Boid
 import numpy as np
-from seein import Vector,Matrix
+from Linalg import Vector,Matrix
 import pygame,random,math,time,copy
 from vf import DiffRootVector
 from NEAT import *
