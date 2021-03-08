@@ -33,6 +33,7 @@ def CheckEvent():
 				back = False
 				if pieceinHand:
 					if (i,j) in curValidMoves:
+						piecesAvailable[board[i][j]] -= 1
 						board[i][j] = piece
 					else:
 						origI,origJ = lastLegalPos
@@ -57,7 +58,7 @@ def GetBlockFromMouse():
 
 
 def AfterMath(i,j,curfunc):
-	global run,pieceinHand,piece,curValidMoves,lastLegalPos,funcs,KINGSPOS,InCheck,CheckMate,EnPassantMoves_
+	global run,pieceinHand,piece,curValidMoves,lastLegalPos,funcs,KINGSPOS,InCheck,CheckMate,EnPassantMoves_,piecesAvailable
 
 	if board[i][j].lower() == 'k':															### UPDAATE KING's Position
 		KINGSPOS[funcs[not curfunc]] = (i,j) if not (i,j) == lastLegalPos else KINGSPOS[funcs[not curfunc]]
@@ -151,6 +152,8 @@ def PawnPromotion(i,j,func):
 
 	while True:
 		keys = pygame.key.get_pressed()
+		board[i][j] = newFunc('q')
+		break
 		if keys[pygame.K_q]:
 			board[i][j] = newFunc('q')
 			break
@@ -342,7 +345,6 @@ the trouble of writing another function for that. Takes care of not adding a pos
 make the king in check.'''
 
 
-
 ''' 
 Alright so tried creating a chess AI, went at it with 2 approaches: 1. getting all the moves and then moving to each of them and then getting opponent's moves and
 moving to those, yk the casual recursive minmax algo. 2. That was a slow, so since MOVECHECKER moves the piece to check the vacant spot
@@ -356,7 +358,7 @@ def MOVECHECKER(i,j,func,moveI,moveJ,valMoves=[],orig=False,depth=50,lookingFor=
 	##FUNC btw can be str.isupper, which would be white, or str.islower for black (just built up from fenstrings.)
 	##SO if func(board[i][j]); meaning if the piece which im checking the moves for is white and the board's position which im currently at is white too
 	##Then i want this to terminate obv.
-	global board, lastLegalPos, maximScore, minimScore, bestMove,alpha,beta
+	global board, lastLegalPos, maximScore, minimScore, bestMove,alpha,beta,MAXDEPTH, piecesAvailable
 	if (i >= blocks or j>=blocks or i < 0 or j< 0 or (func(board[i][j]) and not board[i][j] in lookingFor) or depth <= 0 or found) and (not orig):
 		if returnBestMove:
 			return ([origPos,bestMove],maximScore) if isMaximizing else (None, minimScore)
@@ -374,6 +376,7 @@ def MOVECHECKER(i,j,func,moveI,moveJ,valMoves=[],orig=False,depth=50,lookingFor=
 				valMoves.append((i,j))
 
 				if returnBestMove:
+					piecesAvailable[origPiece] -= 1
 					lastLegalPos = origPos
 					AfterMath(i,j,not curfunc)
 					maxScore = copy.copy(maximScore)
@@ -384,13 +387,14 @@ def MOVECHECKER(i,j,func,moveI,moveJ,valMoves=[],orig=False,depth=50,lookingFor=
 					alpha,beta = alpha_,beta_
 
 					board[i][j] = origPiece;
+					piecesAvailable[origPiece] += 1
 					KINGSPOS[func] = origKingPos if piece.lower() == 'k' else KINGSPOS[func];
 					LoadConfig(config)
 
 
 					if isMaximizing:
 						if score >= maximScore:
-							bestMove = [origPos, (i,j)]
+							bestMove = [origPos, (i,j)] if d == MAXDEPTH else bestMove
 							maximScore = score;
 						alpha = max(alpha,score)
 						if alpha >= beta:
@@ -517,30 +521,15 @@ def LousyCheckMateAlgo(func):
 					return False
 	return True
 
-# def GetAllPossibleMoves(func):
-# 	global board;
-# 	AllPossibleMoves = []
-# 	for i in range(len(board)):
-# 		for j in range(len(board[0])):
-# 			if func(board[i][j]):
-# 				moves = MOVEFUNCS[board[i][j].lower()](i,j,func,piece=board[i][j])
-# 				if not moves == []:
-# 					moves.remove((i,j))
-# 					AllPossibleMoves.append(((i,j),moves));
-# 	return AllPossibleMoves;
 
 def GetAllPossibleMoves(curfunc,depth=2,isMaximizing=True):
 	global funcs, lastLegalPos,KINGSPOS,board,bestMove,maximScore,minimScore,alpha,beta, InCheck, CheckMate
-#	print('YEA HONEY')
 	if not CheckMate:
-		#isInCheckMate = CheckForCheckMate(not curfunc)
 		if depth <= 0:
-		#	print('YE man')
 			return (None, StaticEvaluation(board,False,curfunc))
 
 		maximScore = float('-inf')
 		minimScore = float('inf')
-	#	print('CALLED',curfunc)
 		for i in range(len(board)):
 			for j in range(len(board[0])):
 				if funcs[curfunc](board[i][j]):
@@ -552,16 +541,16 @@ def GetAllPossibleMoves(curfunc,depth=2,isMaximizing=True):
 	else:
 		CheckMate = False
 		InCheck = None
-		return StaticEvaluation(board,CheckMate,curfunc)
+		return (None,StaticEvaluation(board,CheckMate,curfunc))
 
 def HandleAITurn():
-	global curfunc,board,lastLegalPos,KINGSPOS,bestMove,maximScore,minimScore
-	depth = 2
+	global curfunc,board,lastLegalPos,KINGSPOS,bestMove,maximScore,minimScore,MAXDEPTH
+	depth = MAXDEPTH
 	if curfunc == 0 and not CheckMate:
 		bestMove = None
 		alpha, beta = float('-inf'),float('inf')
 		bMove, _ = GetAllPossibleMoves(curfunc,depth=depth)
-		print(bMove)
+		print(bMove,'BEST MOVE')
 		try:
 			lastLegalPos = bMove[0]
 			MakeMove(*bMove,funcs[curfunc]);
@@ -572,17 +561,8 @@ def HandleAITurn():
 
 
 
-def GetPieceCountScore(pieceCount):
-	pieceScore = {'P':1,"Q":50,"R":20,"N":10,"K":100,'B':10}
-	for each in list(pieceScore.keys()):
-		pieceScore[each.lower()] = -1*pieceScore[each];
-
-	piecesAvailable = {}
-	for i in range(len(board)):
-		for j in range(len(board[0])):
-			if not board[i][j] == '':
-				piecesAvailable.setdefault(board[i][j],0)
-				piecesAvailable[board[i][j]] += 1
+def GetPieceCountScore():
+	global pieceScore, piecesAvailable,pieceCount
 
 	score = 0
 	for each in list(pieceScore.keys()):
@@ -597,21 +577,22 @@ def StaticEvaluation(board,isInCheckMate,curfunc):
 	## CUR FUNC 0 is BLACK
 	global CheckMate,InCheck
 	CheckMateScores = {0:-100,1:100}
-
+	s = 0
 	if isInCheckMate:
 		CheckMate = False
 		InCheck = None
 		return CheckMateScores[curfunc]
 
-	pieceCount = {'P':8,"Q":1,"R":2,"N":2,"K":1,'B':2}
-	return GetPieceCountScore(pieceCount)
+	return GetPieceCountScore() + s
 
 def MakeMove(pos, move,func):
+	global piecesAvailable
 	i,j = pos
 	piece = copy.copy(board[i][j])
 	board[i][j] = ''
 	newI, newJ = move
 	oldPiece=  copy.copy(board[newI][newJ])
+	piecesAvailable[oldPiece] -=1
 	board[newI][newJ] = piece;
 	if piece.lower() == 'k':
 		#print(newI,newJ,func)
@@ -635,6 +616,14 @@ def LoadConfig(config):
 	castlingRights = config['castlingRights']
 	EnPassantMoves_= config['EnPassantMoves_'] 
 
+
+def GetPieceStuff():
+	p = {'P':1,"Q":50,"R":20,"N":10,"K":100,'B':10}
+	pieceCount = {'P':8,"Q":1,"R":2,"N":2,"K":1,'B':2,'':20}
+	for each in list(p.keys()):
+		p[each.lower()] = p[each]*-1
+		pieceCount[each.lower()] = pieceCount[each]
+	return p, copy.copy(pieceCount),pieceCount
 
 def GetKingsPos():
 	global board,KINGSPOS
@@ -662,17 +651,20 @@ alpha = float('-inf')
 beta = float('inf')
 maximScore = float('-inf')
 minimScore = float('inf')
+pieceScore,piecesAvailable,pieceCount = GetPieceStuff()
+MAXDEPTH = 2
 InCheck = None
 curfunc = 1
 PawnHistory = {str.islower:{i:0 for i in range(8)},
-			   str.isupper:{i:0 for i in range(8)},}			##FOR MEASURING CHANGE IN POSITION
+			   str.isupper:{i:0 for i in range(8)}}			##FOR MEASURING CHANGE IN POSITION
 fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'
-# fen = 'rnbqkbnr/pp1p2p1/2p2p2/7p/1QPP1P2/5K1N/PP2P1PP/RNB2B1R'
+fen = 'rnbqkbnr/pp1p2p1/2p2p2/7p/1QPP1P2/5K1N/PP2P1Pp/RNB2B2'
 EnPassantMoves_ = []
 # fen = '4k3/8/2QQ5/8/8/8/8/4K3'
 imgs= loadPicsDict()
 board = GetBoard()
 parseFen(board,fen)
+GetKingsPos()
 
 while run:
 	screen.fill((0,0,0))
@@ -687,4 +679,5 @@ while run:
 	if InCheck is not None:
 		DrawCheck(InCheck)
 	HandleAITurn()
+	pieceCount = copy.copy(piecesAvailable)
 	pygame.display.update()
