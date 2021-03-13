@@ -52,20 +52,6 @@ def GetRandomZVals():
 	flying -= .1
 	return terrain
 
-def GetVertices(pos,r,shape='SQUARE',z=0):
-	if shape == 'TRIANGLE':
-			topVertex = Vector(pos.x+r,pos.y,z)
-			bottomLeft = Vector(pos.x-r,pos.y-r,z)
-			bottomRight = Vector(pos.x-r,pos.y+r,z)
-			return [topVertex,bottomLeft,bottomRight]
-	elif shape == 'SQUARE':
-			topLeft = Vector(pos.x-r,pos.y+r,z)
-			topRight = Vector(pos.x+r,pos.y+r,z)
-			bottomLeft = Vector(pos.x-r,pos.y-r,z)
-			bottomRight = Vector(pos.x+r,pos.y-r,z)
-			return [topLeft,topRight,bottomRight,bottomLeft]
-	else:
-		raise Exception(shape + ' is invalid, puta.');
 def GetMesh():
 	global scl,angle,terrain
 	vertices = []
@@ -104,7 +90,7 @@ def DrawMesh(Mesh):
 		
 angle = .2
 
-## COPY THESE DOWN OVER DRAWMESH to sort of fly over the terrain at 2 frames per second ;-;, gotta optimizie.
+## COPY THESE DOWN JUST OVER DRAWMESH to sort of fly over the terrain at 2 frames per second ;-;, gotta optimizie.
 terrain = GetRandomZVals()
 Mesh = GetMesh()
 
