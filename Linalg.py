@@ -35,7 +35,7 @@ class Vector():
             args = [(elem/magnitude) for elem in self.elems]
             return Vector(*args)
         else:
-            return self            
+            return Vector(0,0)            
 
     def __repr__(self):
         return ('Vector {}'.format(self.elems))
@@ -48,17 +48,19 @@ class Vector():
 
     def __add__(self,b):
         if not isinstance(b,Vector):
-            raise Exception("Gotta be a vector hombre")
+            raise Exception("Gotta be a vector hombre {}".format(b))
         try:
             return Vector(*[(self[i] + b[i]) for i in range(len(self))])
         except:
             raise Exception("dims don't match man {}d and {}d".format(len(self),len(b)))
 
 
-    def applyTransformation(self,mat):
+    def applyTransformation(self,mat,return_new=False):
         if not isinstance(mat,Matrix):
             raise Exception('ffs man')
         return (reduce(lambda x,y :x+y,[(mat[i]*self[i]) for i in range(len(self))]))
+        self.elems = transformed.elems if not return_new else self.elems
+        return self if not return_new else transformed
 
 
     def elem_product(self,b):
@@ -68,7 +70,6 @@ class Vector():
 
 
     def dot(self,b):
-        print(self,b)
         return reduce(lambda x,y :x+y,[self[i]*b[i] for i in range(len(self))])
 
 
@@ -135,8 +136,9 @@ class Vector():
 
 
 
-    def GetMagnitude(self):
-        return math.sqrt(sum([pow(elem,2) for elem in self.elems]))
+    def GetMagnitude(self, sqrt=True):
+        mag = (sum([pow(elem,2) for elem in self.elems]))
+        return math.sqrt(mag) if sqrt else mag
 
     def __mul__(self,scl):
         if isinstance(scl,Vector):
@@ -154,10 +156,12 @@ class Vector():
 
 
     def __sub__(self,b):
-        return self.__add__(b*-1)
+        res = self.__add__(-1*b)
+        return res
 
     def __eq__(self,other):
         return reduce(lambda x,y: x and y, [self[i] == other[i] for i in range(len(self))])
+
 
     @staticmethod
     def up():
@@ -180,21 +184,45 @@ class Vector():
 class Matrix():
     def __init__(self,twoDList):
         self.mat = []
-        validLen = len(twoDList[0])
-        self.npMAT = np.array(twoDList)
-        twoDList= [list(x) for x in np.array(twoDList).T]
-        prev = None
-        for each in twoDList:
-            if prev is not None and len(each) != len(prev):
-                raise Exception('dims don\'t match {}d and {}d'.format(len(prev),len(each)))
-            v = Vector(*each)
-            self.mat.append(v)
-            prev = v
+
+        if type(twoDList[0]) == list:
+            validLen = len(twoDList[0])
+            self.npMAT = np.array(twoDList)
+            twoDList= [list(x) for x in np.array(twoDList).T]
+            prev = None
+            for each in twoDList:
+                if prev is not None and len(each) != len(prev):
+                    raise Exception('dims don\'t match {}d and {}d'.format(len(prev),len(each)))
+                v = Vector(*each)
+                self.mat.append(v)
+                prev = v
+                
+        elif type(twoDList[0]) == Vector:
+            self.mat = twoDList
+            assert reduce((lambda x,y: x and y), [(type(each) == Vector) for each in twoDList])
+            
+        else:
+            raise Exception(f'wdf is this hombre? {type(twoDList[0])}')
 
     def __repr__(self):
         return f'MATRIX {self.mat}'
+
+    def __mul__(self,scl):
+        return Matrix([self[i]*scl for i in range(len(self))])    
+
+    __rmul__=__mul__
+
+    def __add__(self,b):
+        return Matrix([self[i]+b[i] for i, each in enumerate(self)])
+
+    def __sub__(self,b):
+        return self + (b*-1)
+
     def __getitem__(self,i):
         return self.mat[i]
+
+    def __len__(self):
+        return len(self.mat)
     
     def inv(self):
         return np.linalg.inv(self.npMAT)
