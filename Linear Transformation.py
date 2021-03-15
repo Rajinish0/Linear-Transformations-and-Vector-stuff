@@ -1,5 +1,5 @@
 import pygame,random,math,time,copy,sys,threading
-from seein import Vector, Matrix
+from Linalg import Vector, Matrix
 from vf import DiffRootVector
 run = True
 w,h = 800,600
