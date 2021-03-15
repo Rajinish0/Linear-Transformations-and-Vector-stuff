@@ -2,7 +2,7 @@ import pygame,random,math,time,copy,sys,threading
 from seein import Vector, Matrix
 from vf import DiffRootVector
 run = True
-w,h = 1200,800
+w,h = 800,600
 alteredW = 1500
 alteredH = 1500
 screen = pygame.display.set_mode((w,h))
