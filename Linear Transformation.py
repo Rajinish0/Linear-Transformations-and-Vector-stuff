@@ -135,7 +135,6 @@ def applyTrans():
 								 ])
 		percent += 0.01
 		percent = round(percent,2)
-		print(curTransformation,percent)
 		endPoints = copy.deepcopy(origVs) if not percent>1 else endPoints
 
 
@@ -144,8 +143,6 @@ endPoints = EndPoints()
 T = Matrix([[1,1],
 			[1,1]])
 
-print(adjustTransformation(T))
-done = False
 
 while run:
 	func([DrawLines,drawBasisVectors],Args=[
@@ -155,6 +152,5 @@ while run:
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_a]:
 			applyTrans()
-			done = not done
 
 	
