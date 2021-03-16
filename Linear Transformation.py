@@ -3,8 +3,8 @@ from Linalg import Vector, Matrix
 from vf import DiffRootVector
 run = True
 w,h = 800,600
-alteredW = 1500
-alteredH = 1500
+alteredW = 1200
+alteredH = 1200
 screen = pygame.display.set_mode((w,h))
 clock = pygame.time.Clock()
 scale = 50
@@ -28,6 +28,7 @@ def GetBasisVectors():
 	v4 = endPoints[-1][0]
 	threshold = Vector(w//2,h//2)
 
+	# return (v2-v1), (v4-v3)
 	# if not ProjectIn3d:
 	x1 = v2-v1
 	x2 = v4-v3
@@ -47,12 +48,16 @@ def GetBasisVectors():
 	
 
 def drawBasisVectors():
-	global ProjectIn3d
+	global ProjectIn3d,testVector
 	if not ProjectIn3d:
 		i,j = GetBasisVectors()
 		for bVectors in (i,j):
-			bVectors.b, bVectors.r = (0,255)
+			bVectors.b, bVectors.r,bVectors.g = (255,255,255)
 			bVectors.draw(screen)
+		if testVector is not None:
+			vToTest = DiffRootVector(Vector(w//2,h//2),*testVector,clampMagnitude=False)
+			vToTest.b,vToTest.r,vToTest.g = (0,255,0)
+			vToTest.draw(screen)
 			# pygame.draw.line(screen,(255,0,0),(w//2,h//2),(w//2+bVectors.x,h//2+bVectors.y),2)
 
 def EndPoints():
@@ -77,9 +82,13 @@ def projg(vert):
 	vert.x *= (1-(5-vert.z/25)/100)
 	vert.y *= (1-(5-vert.z/25)/100)
 
+ang = 1
 def Get3dProjected(v):
+	global ang
 	z = constrain(v.y,alteredH,25)
-	rotatedV = Vector(*v.elems,z).RotationX(60,Vector(0,0,0))
+	rotatedV = Vector(*v.elems,z).RotationX(45,Vector(0,0,0))
+	rotatedV = rotatedV.RotationZ(ang,Vector(0,0,0))
+	ang += .001
 	projg(rotatedV)
 	return rotatedV
 
@@ -98,9 +107,20 @@ def DrawLines(l,c):
 
 
 def func(funcsToCall=[], Args=None):
+	global origEnds,origTestVector
 	screen.fill((0,0,0))
+
+	try:
+		DrawLines(origEnds,(21,21,51))
+		if not ProjectIn3d:
+			vToTest = DiffRootVector(Vector(w//2,h//2),*origTestVector,clampMagnitude=False)
+			vToTest.b,vToTest.r = (51,51)
+			vToTest.draw(screen)
+	except:
+		pass
 	for i,func in enumerate(funcsToCall):
 		func(*Args[i])
+
 	pygame.display.update()
 	CheckEvent()
 
@@ -118,16 +138,23 @@ def adjustTransformation(T):
 	return Matrix(origTrans)
 
 def applyTrans():
-	global endPoints, T
-	percent = .1
+	global endPoints, T,testVector
+	percent = 0
 	IdentityMatrix = Matrix([[1,0],
 							[0,1]])
 	origVs = copy.deepcopy(endPoints)
+	origTest = copy.copy(testVector)
 	Transformation = adjustTransformation(T)
+
 	while percent<=1:
 		curTransformation = Lerp(IdentityMatrix,Transformation,percent)
 		for i,(v1,v2) in enumerate(endPoints):
 			endPoints[i] = (v1.applyTransformation(curTransformation),v2.applyTransformation(curTransformation))
+
+
+		if testVector != None:
+			testVector = testVector.applyTransformation(curTransformation)
+
 		func([DrawLines,clock.tick,drawBasisVectors],Args=[
 							[endPoints,(51,81,121)],
 								[20],
@@ -136,12 +163,26 @@ def applyTrans():
 		percent += 0.01
 		percent = round(percent,2)
 		endPoints = copy.deepcopy(origVs) if not percent>1 else endPoints
+		testVector = copy.copy(origTest) if not percent>1 else testVector
 
 
-ProjectIn3d = False
+ProjectIn3d = True
+if ProjectIn3d:
+	alteredW,alteredH = 700,700
 endPoints = EndPoints()
-T = Matrix([[1,1],
-			[1,1]])
+origEnds = copy.deepcopy(endPoints)
+#testVector=Vector(.55,-.83)*scale
+#testVector=Vector(0,0)*scale
+testVector = Vector(3,2)*scale ##y coord flipped
+origTestVector = copy.copy(testVector)
+Ts = {0:Matrix([[1,5], 
+			[-1,-2]]),1:Matrix([[1,-1],
+					[8,-2]])}
+Ts = {0:Matrix([[1,-1],
+				[1,-1]]),1:Matrix([[-1,0],
+								[0,1]])}
+curT = 0
+T= Ts[curT]
 
 
 while run:
@@ -152,5 +193,18 @@ while run:
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_a]:
 			applyTrans()
+			
+	if keys[pygame.K_r]:
+		endPoints = EndPoints()
+		origEnds = copy.deepcopy(endPoints)
+		testVector = Vector(3,2)*scale
+		origTestVector = copy.copy(testVector)
+		curT = not curT 
+		T = Ts[curT]
+		
+	if keys[pygame.K_c]:
+		curT = not curT
+		T = Ts[curT]
+		time.sleep(.1)
 
 	
