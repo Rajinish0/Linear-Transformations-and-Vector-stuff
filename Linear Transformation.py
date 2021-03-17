@@ -1,13 +1,14 @@
 import pygame,random,math,time,copy,sys,threading
-from Linalg import Vector, Matrix
+from seein import Vector, Matrix
 from vf import DiffRootVector
 run = True
 w,h = 800,600
-alteredW = 1200
-alteredH = 1200
+alteredW = 1500
+alteredH = 1500
 screen = pygame.display.set_mode((w,h))
 clock = pygame.time.Clock()
 scale = 50
+depth = 150 ## Z depth for three d octant
 
 def CheckEvent():
 	global run
@@ -60,8 +61,17 @@ def drawBasisVectors():
 			vToTest.draw(screen)
 			# pygame.draw.line(screen,(255,0,0),(w//2,h//2),(w//2+bVectors.x,h//2+bVectors.y),2)
 
+
 def EndPoints():
-	global scale
+	global threeDoctant
+	# for z in range(0,depth,scale):
+	print(threeDoctant)
+	endPoints = GetEndPoints2d() if not threeDoctant else GetEndPoints3d()
+	return endPoints		
+
+
+def GetEndPoints2d():
+	global scale,depth, threeDoctant
 	endPoints = []
 	for x in range(0,alteredW,scale):
 		endPoints.append([Vector(x-alteredW//2,(alteredH//2)),Vector(x-alteredW//2,-(alteredH-alteredH//2))])
@@ -73,7 +83,25 @@ def EndPoints():
 		func([DrawLines],Args=[
 							  [endPoints,(51,81,121)]
 							  ])
-	return endPoints		
+	return endPoints
+
+
+def GetEndPoints3d():
+	global scale,depth, threeDoctant
+	endPoints = []
+	for z in range(0,150,scale):
+		for x in range(0,alteredW,scale):
+			endPoints.append([Vector(x-alteredW//2,(alteredH//2),z),Vector(x-alteredW//2,-(alteredH-alteredH//2),z)])
+			func([DrawLines],Args=[
+								  [endPoints,(51,81,121)]
+								  ])
+		for y in range(0,alteredH,scale):
+			endPoints.append([Vector(0-(alteredW//2),-(y-alteredH//2),z),Vector(alteredW-(alteredW//2),-(y-alteredH//2),z)])
+			func([DrawLines],Args=[
+								  [endPoints,(51,81,121)]
+								  ])
+	return endPoints
+
 
 def constrain(cur,total,maximum):
     return ((cur*abs(maximum)*2)/total)-maximum
@@ -84,11 +112,18 @@ def projg(vert):
 
 ang = 1
 def Get3dProjected(v):
-	global ang
-	z = constrain(v.y,alteredH,25)
-	rotatedV = Vector(*v.elems,z).RotationX(45,Vector(0,0,0))
-	rotatedV = rotatedV.RotationZ(ang,Vector(0,0,0))
-	ang += .001
+	global ang,depth
+	try:
+		if v.z == 0:
+			raise Exception()
+		z = constrain(v.z,depth,25)
+	except:
+		z = constrain(v.y,alteredH,25)
+
+	rotatedV = Vector(*v.elems[:2],z).RotationX(45,Vector(0,0,0))
+	# print(ang)
+	rotatedV = rotatedV.RotationY(ang,Vector(0,0,0))
+	ang += 0.001
 	projg(rotatedV)
 	return rotatedV
 
@@ -96,7 +131,7 @@ def DrawLines(l,c):
 	global ProjectIn3d
 
 	for i,(v1,v2) in enumerate(l):
-		x1,y1,x2,y2 = v1.elems+v2.elems
+		x1,y1,x2,y2 = v1.elems[:2]+v2.elems[:2]
 		## 3D projected Rotation of the 2d plance
 		if ProjectIn3d:
 			nV1 = Get3dProjected(v1)
@@ -138,13 +173,18 @@ def adjustTransformation(T):
 	return Matrix(origTrans)
 
 def applyTrans():
-	global endPoints, T,testVector
+	global endPoints, T,testVector, threeDoctant
 	percent = 0
+	percentInc = .01 if not threeDoctant else .1
 	IdentityMatrix = Matrix([[1,0],
 							[0,1]])
+	if threeDoctant:
+		IdentityMatrix = Matrix([[1,0,0],
+								[0,1,0],
+								[0,0,1]])
 	origVs = copy.deepcopy(endPoints)
 	origTest = copy.copy(testVector)
-	Transformation = adjustTransformation(T)
+	Transformation = adjustTransformation(T) if not threeDoctant else T
 
 	while percent<=1:
 		curTransformation = Lerp(IdentityMatrix,Transformation,percent)
@@ -160,15 +200,26 @@ def applyTrans():
 								[20],
 								[]
 								 ])
-		percent += 0.01
+		percent += percentInc
 		percent = round(percent,2)
 		endPoints = copy.deepcopy(origVs) if not percent>1 else endPoints
 		testVector = copy.copy(origTest) if not percent>1 else testVector
 
 
-ProjectIn3d = True
+## SO YOU CAN PROJECT A 2d plane in 3d
+ProjectIn3d = False
+
+## OR YOU CAN HAVE A 3D PLANE
+threeDoctant = True
+if threeDoctant:
+	ProjectIn3d = 1;
+
 if ProjectIn3d:
 	alteredW,alteredH = 700,700
+
+
+
+
 endPoints = EndPoints()
 origEnds = copy.deepcopy(endPoints)
 #testVector=Vector(.55,-.83)*scale
@@ -178,11 +229,17 @@ origTestVector = copy.copy(testVector)
 Ts = {0:Matrix([[1,5], 
 			[-1,-2]]),1:Matrix([[1,-1],
 					[8,-2]])}
-Ts = {0:Matrix([[1,-1],
-				[1,-1]]),1:Matrix([[-1,0],
-								[0,1]])}
+# Ts = {0:Matrix([[1,-1],
+# 				[1,-1]]),1:Matrix([[-1,0],
+# 								[0,1]])}
+Ts = {0:Vector(0,0,0).RotationOnX(90), 1:Matrix([[1,-1,0],
+				[1,2,0],
+				[0,0,0]])}
 curT = 0
 T= Ts[curT]
+
+if threeDoctant:
+	assert (len(T.mat[0]) == 3)
 
 
 while run:
@@ -193,7 +250,6 @@ while run:
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_a]:
 			applyTrans()
-			
 	if keys[pygame.K_r]:
 		endPoints = EndPoints()
 		origEnds = copy.deepcopy(endPoints)
@@ -201,10 +257,12 @@ while run:
 		origTestVector = copy.copy(testVector)
 		curT = not curT 
 		T = Ts[curT]
-		
+
+
 	if keys[pygame.K_c]:
 		curT = not curT
 		T = Ts[curT]
+		print(T)
 		time.sleep(.1)
 
 	
