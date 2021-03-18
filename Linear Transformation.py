@@ -1,4 +1,4 @@
-import pygame,random,math,time,copy,sys,threading
+import pygame,random,math,time,copy,sys,threading, numpy as np
 from seein import Vector, Matrix
 from vf import DiffRootVector
 run = True
@@ -8,7 +8,7 @@ alteredH = 1500
 screen = pygame.display.set_mode((w,h))
 clock = pygame.time.Clock()
 scale = 50
-depth = 150 ## Z depth for three d octant
+depth = 150 ## Z depth for three d plane
 
 def CheckEvent():
 	global run
@@ -89,7 +89,7 @@ def GetEndPoints2d():
 def GetEndPoints3d():
 	global scale,depth, threeDoctant
 	endPoints = []
-	for z in range(0,150,scale):
+	for z in range(0,depth,scale):
 		for x in range(0,alteredW,scale):
 			endPoints.append([Vector(x-alteredW//2,(alteredH//2),z),Vector(x-alteredW//2,-(alteredH-alteredH//2),z)])
 			func([DrawLines],Args=[
@@ -120,10 +120,10 @@ def Get3dProjected(v):
 	except:
 		z = constrain(v.y,alteredH,25)
 
-	rotatedV = Vector(*v.elems[:2],z).RotationX(45,Vector(0,0,0))
+	rotatedV = Vector(*v.elems[:2],z).RotationX(0,Vector(0,0,0))
 	# print(ang)
 	rotatedV = rotatedV.RotationY(ang,Vector(0,0,0))
-	ang += 0.001
+	ang += 0.002
 	projg(rotatedV)
 	return rotatedV
 
@@ -173,7 +173,7 @@ def adjustTransformation(T):
 	return Matrix(origTrans)
 
 def applyTrans():
-	global endPoints, T,testVector, threeDoctant
+	global endPoints, T,testVector, threeDoctant, ProjectIn3d
 	percent = 0
 	percentInc = .01 if not threeDoctant else .1
 	IdentityMatrix = Matrix([[1,0],
@@ -184,10 +184,18 @@ def applyTrans():
 								[0,0,1]])
 	origVs = copy.deepcopy(endPoints)
 	origTest = copy.copy(testVector)
-	Transformation = adjustTransformation(T) if not threeDoctant else T
+	Transformation = adjustTransformation(T) if (not threeDoctant or T.shape != IdentityMatrix.shape) else T
 
 	while percent<=1:
-		curTransformation = Lerp(IdentityMatrix,Transformation,percent)
+		## OBSCURE 2d to 3d transformations or 3d to 2d transformations, idk how to linearly interpolate bw those
+		if T.shape == IdentityMatrix.shape:
+				curTransformation = Lerp(IdentityMatrix,Transformation,percent)
+		else:
+				ProjectIn3d = True
+				curTransformation = T
+				percent = 1
+
+
 		for i,(v1,v2) in enumerate(endPoints):
 			endPoints[i] = (v1.applyTransformation(curTransformation),v2.applyTransformation(curTransformation))
 
@@ -210,12 +218,13 @@ def applyTrans():
 ProjectIn3d = False
 
 ## OR YOU CAN HAVE A 3D PLANE
-threeDoctant = True
+threeDoctant = False
 if threeDoctant:
 	ProjectIn3d = 1;
 
 if ProjectIn3d:
-	alteredW,alteredH = 700,700
+	alteredW,alteredH = 500,500
+
 
 
 
@@ -224,17 +233,25 @@ endPoints = EndPoints()
 origEnds = copy.deepcopy(endPoints)
 #testVector=Vector(.55,-.83)*scale
 #testVector=Vector(0,0)*scale
-testVector = Vector(3,2)*scale ##y coord flipped
+
+## JUST PLAYING WITH TRANSFORMATIONS
+
+eigs = list(np.linalg.eig(np.array([[1,-3],
+				[-3,2]]))[1][0])
+# eigs[1] *= -1
+print(eigs)
+testVector = Vector(*eigs)*scale ##y coord flipped
 origTestVector = copy.copy(testVector)
-Ts = {0:Matrix([[1,5], 
-			[-1,-2]]),1:Matrix([[1,-1],
-					[8,-2]])}
-# Ts = {0:Matrix([[1,-1],
-# 				[1,-1]]),1:Matrix([[-1,0],
-# 								[0,1]])}
-Ts = {0:Vector(0,0,0).RotationOnX(90), 1:Matrix([[1,-1,0],
-				[1,2,0],
-				[0,0,0]])}
+# Ts = {0:Matrix([[1,1], 
+# 			[-1,-1],
+# 			[2,1]]),1:Matrix([[1,-1,2],
+# 					[1,-1,1]])}
+Ts = {0:Matrix([[1,-1],
+				[1,-1]]),1:Matrix([[-1,0],
+								[0,1]])}
+# Ts = {0:Vector(0,0,0).RotationOnX(90), 1:Matrix([[1,-1,0],
+# 				[1,2,0],
+# 				[1,2,3]])}
 curT = 0
 T= Ts[curT]
 
@@ -250,6 +267,8 @@ while run:
 	keys = pygame.key.get_pressed()
 	if keys[pygame.K_a]:
 			applyTrans()
+			time.sleep(.1)
+			
 	if keys[pygame.K_r]:
 		endPoints = EndPoints()
 		origEnds = copy.deepcopy(endPoints)
