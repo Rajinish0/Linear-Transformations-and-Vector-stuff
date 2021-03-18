@@ -105,7 +105,7 @@ class Vector():
     def RotationOnY(self,angle):
         m = Matrix([
                 [math.cos(math.radians(angle)),0,-math.sin(math.radians(angle))],
-                [1,0,0],
+                [0,1,0],
                 [math.sin(math.radians(angle)),0,math.cos(math.radians(angle))]
                 ])  
         return m
@@ -160,7 +160,7 @@ class Vector():
         return res
 
     def __eq__(self,other):
-        return reduce(lambda x,y: x and y, [self[i] == other[i] for i in range(len(self))])
+        return reduce(lambda x,y: x and y, [self[i] == other[i] for i in range(len(self))]) if other is not None else False
 
 
     @staticmethod
@@ -190,6 +190,7 @@ class Matrix():
             self.npMAT = np.array(twoDList)
             twoDList= [list(x) for x in np.array(twoDList).T]
             prev = None
+            
             for each in twoDList:
                 if prev is not None and len(each) != len(prev):
                     raise Exception('dims don\'t match {}d and {}d'.format(len(prev),len(each)))
@@ -202,15 +203,19 @@ class Matrix():
             assert reduce((lambda x,y: x and y), [(type(each) == Vector) for each in twoDList])
             
         else:
-            raise Exception(f'wdf is this hombre? {type(twoDList[0])}')
+            raise Exception(f'wdf are you sending me. {type(twoDList[0])}')
 
+
+    @property
+    def shape(self):
+        return Vector(len(self.mat),len(self.mat[0]))
+    
     def __repr__(self):
         return f'MATRIX {self.mat}'
 
     def __mul__(self,scl):
-        return Matrix([self[i]*scl for i in range(len(self))])    
-
-    __rmul__=__mul__
+        return Matrix([self[i]*scl for i in range(len(self))])
+    __rmul__ = __mul__
 
     def __add__(self,b):
         return Matrix([self[i]+b[i] for i, each in enumerate(self)])
@@ -226,3 +231,13 @@ class Matrix():
     
     def inv(self):
         return np.linalg.inv(self.npMAT)
+
+    def applyTransformation(self,mat):
+        if type(mat) != Matrix:
+            raise Exception("PUTA MADRE.")
+        try:
+            return Matrix([self[i].applyTransformation(mat) for i in range(len(self))])
+        except:
+            raise Exception(f"{len(self)}x{len(self[0])} with {len(mat)}x{len(mat[0])}, you loco man.")
+
+
