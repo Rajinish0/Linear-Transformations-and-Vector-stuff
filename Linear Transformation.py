@@ -2,7 +2,7 @@ import pygame,random,math,time,copy,sys,threading, numpy as np
 from seein import Vector, Matrix
 from vf import DiffRootVector
 run = True
-w,h = 800,600
+w,h = 1200,600
 alteredW = 1500
 alteredH = 1500
 screen = pygame.display.set_mode((w,h))
@@ -120,9 +120,9 @@ def Get3dProjected(v):
 	except:
 		z = constrain(v.y,alteredH,25)
 
-	rotatedV = Vector(*v.elems[:2],z).RotationX(0,Vector(0,0,0))
+	#rotatedV = Vector(*v.elems[:2],z).RotationX(0,Vector(0,0,0))
 	# print(ang)
-	rotatedV = rotatedV.RotationY(ang,Vector(0,0,0))
+	rotatedV = Vector(*v.elems[:2],z).RotationY(ang,Vector(0,0,0))
 	ang += 0.002
 	projg(rotatedV)
 	return rotatedV
@@ -228,30 +228,26 @@ if ProjectIn3d:
 
 
 
-
 endPoints = EndPoints()
 origEnds = copy.deepcopy(endPoints)
 #testVector=Vector(.55,-.83)*scale
 #testVector=Vector(0,0)*scale
-
-## JUST PLAYING WITH TRANSFORMATIONS
-
 eigs = list(np.linalg.eig(np.array([[1,-3],
 				[-3,2]]))[1][0])
 # eigs[1] *= -1
 print(eigs)
 testVector = Vector(*eigs)*scale ##y coord flipped
 origTestVector = copy.copy(testVector)
-# Ts = {0:Matrix([[1,1], 
-# 			[-1,-1],
-# 			[2,1]]),1:Matrix([[1,-1,2],
-# 					[1,-1,1]])}
-Ts = {0:Matrix([[1,-1],
-				[1,-1]]),1:Matrix([[-1,0],
-								[0,1]])}
+Ts = {0:Matrix([[1,1], 
+			[-1,-1],
+			[2,1]]),1:Matrix([[1,2,2],
+					[1,2,2]])}
+# Ts = {0:Matrix([[1,-3],
+				# [-3,2]]),1:Matrix([[-1,0],
+								# [0,1]])}
 # Ts = {0:Vector(0,0,0).RotationOnX(90), 1:Matrix([[1,-1,0],
-# 				[1,2,0],
-# 				[1,2,3]])}
+				# [1,2,0],
+				# [1,2,3]])}
 curT = 0
 T= Ts[curT]
 
@@ -265,10 +261,13 @@ while run:
 						  []
 						  ])
 	keys = pygame.key.get_pressed()
+	
+	## APPLY TRANSFORMATION
 	if keys[pygame.K_a]:
 			applyTrans()
 			time.sleep(.1)
-			
+
+	## REDRAW THE PLANE, or the 3d space.
 	if keys[pygame.K_r]:
 		endPoints = EndPoints()
 		origEnds = copy.deepcopy(endPoints)
@@ -278,6 +277,7 @@ while run:
 		T = Ts[curT]
 
 
+	## CHANGES THE TRANSFORMATION IN DICTIONARY
 	if keys[pygame.K_c]:
 		curT = not curT
 		T = Ts[curT]
