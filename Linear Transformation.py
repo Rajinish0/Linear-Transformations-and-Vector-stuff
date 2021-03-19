@@ -11,12 +11,27 @@ scale = 50
 depth = 150 ## Z depth for three d plane
 
 def CheckEvent():
-	global run
+	global run, ang, mouseIsDown, origXPos, origYPos
+	gotOrigPos = False
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			pygame.QUIT
 			run = False
 			sys.exit()
+
+		if event.type == pygame.MOUSEBUTTONDOWN:
+			if not gotOrigPos:
+				origXPos, origYPos = pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]
+				gotOrigPos = True
+				mouseIsDown= True
+
+		if event.type == pygame.MOUSEBUTTONUP:
+			gotOrigPos = False
+			mouseIsDown = False
+
+		if mouseIsDown:
+			SetAngle()
+
 	keys = pygame.key.get_pressed()
 	return (keys,run)
 
@@ -29,19 +44,9 @@ def GetBasisVectors():
 	v4 = endPoints[-1][0]
 	threshold = Vector(w//2,h//2)
 
-	# return (v2-v1), (v4-v3)
-	# if not ProjectIn3d:
 	x1 = v2-v1
 	x2 = v4-v3
-	# else:
-	# 	# v1,v2,v3,v4 = Get3dProjected(v1),Get3dProjected(v2),Get3dProjected(v3),Get3dProjected(v4)
-	# 	#sprint(v1,v2)
-	# 	x1,x2= v2-v1, v4-v3
-	# 	print(x1)
-	# 	# x1 = Get3dProjected(x1)
-	# 	# x2= Get3dProjected(x2)
-	# 	pygame.draw.line(screen,(255,255,255),(w//2+v1.x,h//2+v1.y),(w//2+v2.x,h//2+v2.y),5)
-	# 	#print(v2-v1)
+
 
 	ihat = DiffRootVector(threshold,*(x1),clampMagnitude=False)
 	jhat = DiffRootVector(threshold,*(x2),clampMagnitude=False)
@@ -110,26 +115,26 @@ def projg(vert):
 	vert.x *= (1-(5-vert.z/25)/100)
 	vert.y *= (1-(5-vert.z/25)/100)
 
-ang = 1
+ang = 0
+angX = 0
 def Get3dProjected(v):
 	global ang,depth
 	try:
-		if v.z == 0:
-			raise Exception()
+
 		z = constrain(v.z,depth,25)
 	except:
 		z = constrain(v.y,alteredH,25)
 
-	#rotatedV = Vector(*v.elems[:2],z).RotationX(0,Vector(0,0,0))
+	rotatedV = Vector(*v.elems[:2],z).RotationX(angX,Vector(0,0,0))
 	# print(ang)
-	rotatedV = Vector(*v.elems[:2],z).RotationY(ang,Vector(0,0,0))
-	ang += 0.002
+	rotatedV = rotatedV.RotationY(ang,Vector(0,0,0))
+	# rotatedV = Vector(*v.elems[:2],z)
+	ang += 0.001
 	projg(rotatedV)
 	return rotatedV
 
 def DrawLines(l,c):
 	global ProjectIn3d
-
 	for i,(v1,v2) in enumerate(l):
 		x1,y1,x2,y2 = v1.elems[:2]+v2.elems[:2]
 		## 3D projected Rotation of the 2d plance
@@ -172,6 +177,12 @@ def adjustTransformation(T):
 	origTrans[0].y *= -1
 	return Matrix(origTrans)
 
+def SetAngle():
+	global ang, angX
+	ang = -1*(pygame.mouse.get_pos()[0] - origXPos)/2
+	angX = -1*(pygame.mouse.get_pos()[1] - origYPos)/2
+
+
 def applyTrans():
 	global endPoints, T,testVector, threeDoctant, ProjectIn3d
 	percent = 0
@@ -197,10 +208,11 @@ def applyTrans():
 
 
 		for i,(v1,v2) in enumerate(endPoints):
+			print(v1,v2)
 			endPoints[i] = (v1.applyTransformation(curTransformation),v2.applyTransformation(curTransformation))
 
 
-		if testVector != None:
+		if testVector != None and not ProjectIn3d:
 			testVector = testVector.applyTransformation(curTransformation)
 
 		func([DrawLines,clock.tick,drawBasisVectors],Args=[
@@ -213,21 +225,9 @@ def applyTrans():
 		endPoints = copy.deepcopy(origVs) if not percent>1 else endPoints
 		testVector = copy.copy(origTest) if not percent>1 else testVector
 
-		
-		
-		
-# SO THIS REQUIRES SOME EXPLANATION...
-# YOU CAN yk just WATCH 2D TRANSFORMATIONS IN A 2D PLANE IF YOU SET PROJECT IN 3D FALSE
-# OR IF YOU SET THAT TO TRUE THEN YOU CAN WATCH 2D TRANSFORMATIONS PROJECTED IN 3D SPACE, IT'S KINDA PRETTIER TO LOOK AT.
-# AND OFC YOU CAN DO 3D TRANSFORMATIONS, JUST SET THREE3DOCTANT TO TRUE AND CHOOSE YOUR TRANSFORMATION MATRIX
-# JUST LETHARGIC TO PLOT BASIS VECTORS IN 3D..
-# YOU CAN ALSO DO 2D TO 3D TRANSFORMATIONS(WITH A 3X2 MATRIX), YOU DON'T NEED TO SPECIFY IF YOU WANT TO PROJECT IN 3D OR NOT, IT'LL AUTOMATICALLY DO THAT AFTER THE TRANSFORMATION
-# HOWEVER SINCE YOU CAN'T REALLY INTERPOLATE B/W THAT TRANSFORMATION, I COULDN'T ANIMATE THE THING SO WHAT YOU'LL SEE IS THE END RESULT
-# AND OFC YOU CAN DO 3D TO 2D TRANSFORMATIONS TOO.
-
 
 ## SO YOU CAN PROJECT A 2d plane in 3d
-ProjectIn3d = False
+ProjectIn3d = True
 
 ## OR YOU CAN HAVE A 3D PLANE
 threeDoctant = False
@@ -239,6 +239,9 @@ if ProjectIn3d:
 
 
 
+mouseIsDown= False
+origXPos = None
+origYPos = None
 
 endPoints = EndPoints()
 origEnds = copy.deepcopy(endPoints)
@@ -252,20 +255,29 @@ testVector = Vector(*eigs)*scale ##y coord flipped
 origTestVector = copy.copy(testVector)
 Ts = {0:Matrix([[1,1], 
 			[-1,-1],
-			[2,1]]),1:Matrix([[1,2,2],
-					[1,2,2]])}
+			[2,1]]),1:Matrix([[1,-1,2],
+					[1,-1,1]])}
 # Ts = {0:Matrix([[1,-3],
 				# [-3,2]]),1:Matrix([[-1,0],
 								# [0,1]])}
-# Ts = {0:Vector(0,0,0).RotationOnX(90), 1:Matrix([[1,-1,0],
-				# [1,2,0],
-				# [1,2,3]])}
+Ts = {0:Vector(0,0,0).RotationOnX(90), 1:Matrix([[1,-1,0],
+				[1,2,0],
+				[1,2,3]])}
+U,sigma,V = np.linalg.svd(np.array([[1,1],
+							[-1,-1],
+							[2,1]]))
+
+sigma=np.diag(sigma)
+U= U[:,1:]
+print(U.shape,sigma.shape,V.shape)
+Ts = [Matrix(V),Matrix(sigma),Matrix(U), Matrix(U.T),Matrix(sigma), Matrix(V.T)]
+
 curT = 0
 T= Ts[curT]
+print(T)
 
 if threeDoctant:
 	assert (len(T.mat[0]) == 3)
-
 
 while run:
 	func([DrawLines,drawBasisVectors],Args=[
@@ -273,13 +285,10 @@ while run:
 						  []
 						  ])
 	keys = pygame.key.get_pressed()
-	
-	## APPLY TRANSFORMATION
 	if keys[pygame.K_a]:
 			applyTrans()
 			time.sleep(.1)
 
-	## REDRAW THE PLANE, or the 3d space.
 	if keys[pygame.K_r]:
 		endPoints = EndPoints()
 		origEnds = copy.deepcopy(endPoints)
@@ -289,11 +298,14 @@ while run:
 		T = Ts[curT]
 
 
-	## CHANGES THE TRANSFORMATION IN DICTIONARY
+
 	if keys[pygame.K_c]:
-		curT = not curT
+		#curT = not curT
+		curT = curT + 1 if not curT == len(Ts) else 0
 		T = Ts[curT]
 		print(T)
 		time.sleep(.1)
+
+
 
 	
