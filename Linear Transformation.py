@@ -11,7 +11,7 @@ scale = 50
 depth = 150 ## Z depth for three d plane
 
 def CheckEvent():
-	global run, ang, mouseIsDown, origXPos, origYPos
+	global run, ang, mouseIsDown, origXPos, origYPos,disT
 	gotOrigPos = False
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -20,10 +20,18 @@ def CheckEvent():
 			sys.exit()
 
 		if event.type == pygame.MOUSEBUTTONDOWN:
-			if not gotOrigPos:
+
+			if event.button == 4:
+				disT -= (6)
+
+			elif event.button == 5:
+				disT += (6)
+
+			elif not gotOrigPos:
 				origXPos, origYPos = pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]
 				gotOrigPos = True
 				mouseIsDown= True
+
 
 		if event.type == pygame.MOUSEBUTTONUP:
 			gotOrigPos = False
@@ -54,23 +62,21 @@ def GetBasisVectors():
 	
 
 def drawBasisVectors():
-	global ProjectIn3d,testVector
+	global ProjectIn3d,testVectors
 	if not ProjectIn3d:
 		i,j = GetBasisVectors()
 		for bVectors in (i,j):
 			bVectors.b, bVectors.r,bVectors.g = (255,255,255)
 			bVectors.draw(screen)
-		if testVector is not None:
-			vToTest = DiffRootVector(Vector(w//2,h//2),*testVector,clampMagnitude=False)
-			vToTest.b,vToTest.r,vToTest.g = (0,255,0)
-			vToTest.draw(screen)
-			# pygame.draw.line(screen,(255,0,0),(w//2,h//2),(w//2+bVectors.x,h//2+bVectors.y),2)
+		if testVectors is not None:
+			vToTests = [DiffRootVector(Vector(w//2,h//2),*testVector,clampMagnitude=False) for testVector in testVectors] 
+			for vToTest in vToTests:
+				vToTest.b,vToTest.r,vToTest.g = (0,255,0)
+				vToTest.draw(screen)
 
 
 def EndPoints():
 	global threeDoctant
-	# for z in range(0,depth,scale):
-	print(threeDoctant)
 	endPoints = GetEndPoints2d() if not threeDoctant else GetEndPoints3d()
 	return endPoints		
 
@@ -111,9 +117,12 @@ def GetEndPoints3d():
 def constrain(cur,total,maximum):
     return ((cur*abs(maximum)*2)/total)-maximum
 
+disT = 5
 def projg(vert):
-	vert.x *= (1-(5-vert.z/25)/100)
-	vert.y *= (1-(5-vert.z/25)/100)
+	global disT
+	vert.x *= (1-(disT-vert.z/25)/100)
+	vert.y *= (1-(disT-vert.z/25)/100)
+
 
 ang = 0
 angX = 0
@@ -126,9 +135,7 @@ def Get3dProjected(v):
 		z = constrain(v.y,alteredH,25)
 
 	rotatedV = Vector(*v.elems[:2],z).RotationX(angX,Vector(0,0,0))
-	# print(ang)
 	rotatedV = rotatedV.RotationY(ang,Vector(0,0,0))
-	# rotatedV = Vector(*v.elems[:2],z)
 	ang += 0.001
 	projg(rotatedV)
 	return rotatedV
@@ -147,25 +154,25 @@ def DrawLines(l,c):
 
 
 def func(funcsToCall=[], Args=None):
-	global origEnds,origTestVector
+	global origEnds,origTestVectors
 	screen.fill((0,0,0))
 
 	try:
 		DrawLines(origEnds,(21,21,51))
 		if not ProjectIn3d:
-			vToTest = DiffRootVector(Vector(w//2,h//2),*origTestVector,clampMagnitude=False)
-			vToTest.b,vToTest.r = (51,51)
-			vToTest.draw(screen)
+			vToTests = [DiffRootVector(Vector(w//2,h//2),*origTestVector,clampMagnitude=False) for origTestVector in origTestVectors]
+			for vToTest in vToTests:
+				vToTest.b,vToTest.r = (51,51)
+				vToTest.draw(screen)
 	except:
 		pass
+
 	for i,func in enumerate(funcsToCall):
 		func(*Args[i])
 
 	pygame.display.update()
 	CheckEvent()
 
-def doTheRotation(v1,v2,angle):
-	(v1.rotate(Vector(0,0),angle),v2.rotate(Vector(0,0),angle))		
 
 
 def Lerp(a,b,percent):
@@ -179,12 +186,12 @@ def adjustTransformation(T):
 
 def SetAngle():
 	global ang, angX
-	ang = -1*(pygame.mouse.get_pos()[0] - origXPos)/2
-	angX = -1*(pygame.mouse.get_pos()[1] - origYPos)/2
+	ang = -1*(pygame.mouse.get_pos()[0] - origXPos)/5
+	angX = -1*(pygame.mouse.get_pos()[1] - origYPos)/5
 
 
 def applyTrans():
-	global endPoints, T,testVector, threeDoctant, ProjectIn3d
+	global endPoints, T,testVectors, threeDoctant, ProjectIn3d
 	percent = 0
 	percentInc = .01 if not threeDoctant else .1
 	IdentityMatrix = Matrix([[1,0],
@@ -193,27 +200,37 @@ def applyTrans():
 		IdentityMatrix = Matrix([[1,0,0],
 								[0,1,0],
 								[0,0,1]])
+	IM = {(2,2):Matrix([[1,0],
+						[0,1]]),
+	      (3,3):Matrix([[1,0,0],
+	      				[0,1,0],
+	      				[0,0,1]]),
+	      (3,2):Matrix([[1,0],
+	      				[0,1],
+	      				[0,0]]),
+	      (2,3):Matrix([[1,0,0],
+	      				[0,1,0]])}
+	
 	origVs = copy.deepcopy(endPoints)
-	origTest = copy.copy(testVector)
-	Transformation = adjustTransformation(T) if (not threeDoctant or T.shape != IdentityMatrix.shape) else T
+	origTests = copy.deepcopy(testVectors)
+	Transformation = adjustTransformation(T) if Vector(2,2) == T.shape else T
+
+	try:
+		IdentityMatrix = IM[tuple(T.shape.elems)]
+	except:
+		pass
 
 	while percent<=1:
-		## OBSCURE 2d to 3d transformations or 3d to 2d transformations, idk how to linearly interpolate bw those
-		if T.shape == IdentityMatrix.shape:
-				curTransformation = Lerp(IdentityMatrix,Transformation,percent)
-		else:
+		curTransformation = Lerp(IdentityMatrix,Transformation,percent)
+		if curTransformation.shape[0] == 3:
 				ProjectIn3d = True
-				curTransformation = T
-				percent = 1
-
 
 		for i,(v1,v2) in enumerate(endPoints):
-			print(v1,v2)
 			endPoints[i] = (v1.applyTransformation(curTransformation),v2.applyTransformation(curTransformation))
 
 
-		if testVector != None and not ProjectIn3d:
-			testVector = testVector.applyTransformation(curTransformation)
+		if testVectors != None and not ProjectIn3d:
+			testVectors = [testVector.applyTransformation(curTransformation) for testVector in testVectors]
 
 		func([DrawLines,clock.tick,drawBasisVectors],Args=[
 							[endPoints,(51,81,121)],
@@ -223,7 +240,7 @@ def applyTrans():
 		percent += percentInc
 		percent = round(percent,2)
 		endPoints = copy.deepcopy(origVs) if not percent>1 else endPoints
-		testVector = copy.copy(origTest) if not percent>1 else testVector
+		testVectors = copy.deepcopy(origTests) if not percent>1 else testVectors
 
 
 ## SO YOU CAN PROJECT A 2d plane in 3d
@@ -245,39 +262,37 @@ origYPos = None
 
 endPoints = EndPoints()
 origEnds = copy.deepcopy(endPoints)
-#testVector=Vector(.55,-.83)*scale
-#testVector=Vector(0,0)*scale
-eigs = list(np.linalg.eig(np.array([[1,-3],
-				[-3,2]]))[1][0])
-# eigs[1] *= -1
-print(eigs)
-testVector = Vector(*eigs)*scale ##y coord flipped
-origTestVector = copy.copy(testVector)
-Ts = {0:Matrix([[1,1], 
+eigs = list(np.linalg.eig(np.array([[1,1],
+				[1,1]]))[1])
+#eigs[0][1] *= -1
+testVectors = [Vector(*eig)*scale*i for eig in eigs for i in range(-5,5)] ##y coord flipped
+#testVectors = []
+origTestVectors = [copy.copy(each) for each in testVectors]
+Ts = {0:Matrix([[1,1,], 
 			[-1,-1],
-			[2,1]]),1:Matrix([[1,-1,2],
+			[1,1]]),1:Matrix([[1,-1,1],
 					[1,-1,1]])}
-# Ts = {0:Matrix([[1,-3],
-				# [-3,2]]),1:Matrix([[-1,0],
-								# [0,1]])}
-Ts = {0:Vector(0,0,0).RotationOnX(90), 1:Matrix([[1,-1,0],
-				[1,2,0],
-				[1,2,3]])}
-U,sigma,V = np.linalg.svd(np.array([[1,1],
-							[-1,-1],
-							[2,1]]))
+Ts = {0:Matrix([[1,1],
+				[1,1]]),1:Matrix([[1,0],
+								[0,1]])}
+# Ts = {0:Vector(0,0,0).RotationOnX(90), 1:Matrix([[1,-1,0],
+				# [1,2,0],
+				# [1,2,3]])}
 
+## VISUALIZING PSEUDO INVERSE OF THIS MATRIX
+U,sigma,V = np.linalg.svd(np.array([[-1,1],
+							[-1,1],
+							[-1,2]]))
+
+reverseSigma = np.diag(1/sigma)
 sigma=np.diag(sigma)
 U= U[:,1:]
-print(U.shape,sigma.shape,V.shape)
-Ts = [Matrix(V),Matrix(sigma),Matrix(U), Matrix(U.T),Matrix(sigma), Matrix(V.T)]
-
+Ts = [Matrix(V),Matrix(sigma),Matrix(U), Matrix(U.T),Matrix(reverseSigma), Matrix(V.T)]
 curT = 0
 T= Ts[curT]
-print(T)
 
 if threeDoctant:
-	assert (len(T.mat[0]) == 3)
+	assert (len(T.mat) == 3)
 
 while run:
 	func([DrawLines,drawBasisVectors],Args=[
@@ -292,8 +307,7 @@ while run:
 	if keys[pygame.K_r]:
 		endPoints = EndPoints()
 		origEnds = copy.deepcopy(endPoints)
-		testVector = Vector(3,2)*scale
-		origTestVector = copy.copy(testVector)
+		testVectors = copy.deepcopy(origTestVectors)
 		curT = not curT 
 		T = Ts[curT]
 
@@ -301,7 +315,7 @@ while run:
 
 	if keys[pygame.K_c]:
 		#curT = not curT
-		curT = curT + 1 if not curT == len(Ts) else 0
+		curT = curT + 1 if curT != len(Ts)-1 else 0
 		T = Ts[curT]
 		print(T)
 		time.sleep(.1)
