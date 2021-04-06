@@ -1,5 +1,5 @@
-import pygame,random,math,time,copy,sys,threading, numpy as np
-from seein import Vector, Matrix
+import pygame,random,math,time,copy,sys
+from Linalg import Vector, Matrix
 from vf import DiffRootVector
 from exp import Boid
 run = True
