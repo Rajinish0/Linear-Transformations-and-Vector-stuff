@@ -57,10 +57,16 @@ class Vector():
 
     def applyTransformation(self,mat,return_new=False):
         if not isinstance(mat,Matrix):
-            raise Exception('ffs man')
-        return (reduce(lambda x,y :x+y,[(mat[i]*self[i]) for i in range(len(self))]))
-        self.elems = transformed.elems if not return_new else self.elems
-        return self if not return_new else transformed
+            raise Exception('ffs man, necessito un matrix.')
+        try:
+            if len(mat) != len(self.elems):
+                raise Exception;
+            return (reduce(lambda x,y :x+y,[(mat[i]*self[i]) for i in range(len(self))]))
+        except:
+            raise Exception(f"{len(self)}d vector with a {len(mat[0])}x{len(mat)} Matrix, '\n\n' {self}\n\n {mat}")
+
+        # self.elems = transformed.elems if not return_new else self.elems
+        # return self if not return_new else transformed
 
 
     def elem_product(self,b):
@@ -185,30 +191,39 @@ class Matrix():
     def __init__(self,twoDList):
         self.mat = []
 
-        if type(twoDList[0]) == list:
-            validLen = len(twoDList[0])
+        if type(twoDList[0]) == list or type(twoDList) == np.ndarray:
+            try:
+                validLen = len(twoDList[0])
+            except:
+                validLen = 1
+
+
             self.npMAT = np.array(twoDList)
-            twoDList= [list(x) for x in np.array(twoDList).T]
+            try:
+                twoDList= [list(x) for x in self.npMAT.T]
+            except:
+                twoDList = [[x] for x in self.npMAT.T]
+
+
             prev = None
-            
             for each in twoDList:
                 if prev is not None and len(each) != len(prev):
-                    raise Exception('dims don\'t match {}d and {}d'.format(len(prev),len(each)))
+                    raise Exception('dims don\'t match {}d and {}d.'.format((prev),(each)))
                 v = Vector(*each)
                 self.mat.append(v)
                 prev = v
-                
+
         elif type(twoDList[0]) == Vector:
             self.mat = twoDList
             assert reduce((lambda x,y: x and y), [(type(each) == Vector) for each in twoDList])
-            
+
         else:
             raise Exception(f'wdf are you sending me. {type(twoDList[0])}')
 
 
     @property
     def shape(self):
-        return Vector(len(self.mat),len(self.mat[0]))
+        return Vector(len(self.mat[0]),len(self.mat))
     
     def __repr__(self):
         return f'MATRIX {self.mat}'
@@ -234,10 +249,29 @@ class Matrix():
 
     def applyTransformation(self,mat):
         if type(mat) != Matrix:
-            raise Exception("PUTA MADRE.")
+            mat = Matrix(mat)
         try:
             return Matrix([self[i].applyTransformation(mat) for i in range(len(self))])
         except:
             raise Exception(f"{len(self)}x{len(self[0])} with {len(mat)}x{len(mat[0])}, you loco man.")
 
 
+
+    def calcDeterminent(self,mat=None):
+        mat = self.npMAT if mat is None else mat
+        assert type(mat) == np.ndarray
+
+        if not reduce(lambda x,y: x == y, [each for each in mat.shape]):
+            raise Exception(f"NOT A SQUARE MATRIX, PUTA MADRE. SHAPE: {mat.shape}")
+
+        if len(mat[0]) == 1:
+            return mat.item()
+
+
+        det = 0
+        for i in range(len(mat[0])):
+            num = mat[0][i]
+            nMat = mat[1:]
+            rMat = np.c_[nMat[:,:i],nMat[:,i+1:]]
+            det += pow(-1,1+i+1) * num * self.calcDeterminent(rMat)
+        return det
