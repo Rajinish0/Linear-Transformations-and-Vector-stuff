@@ -15,6 +15,10 @@ class Vector():
     @property
     def z(self):
         return self.elems[2]
+    @property
+    def npV(self):
+        return np.array([*self.elems]).reshape(-1,1)
+    
 
 
     @x.setter
@@ -61,7 +65,9 @@ class Vector():
         try:
             if len(mat) != len(self.elems):
                 raise Exception;
-            return (reduce(lambda x,y :x+y,[(mat[i]*self[i]) for i in range(len(self))]))
+
+            return Vector(*list((mat.npMAT@self.npV)[:,0]))
+            # return (reduce(lambda x,y :x+y,[(mat[i]*self[i]) for i in range(len(self))]))
         except:
             raise Exception(f"{len(self)}d vector with a {len(mat[0])}x{len(mat)} Matrix, '\n\n' {self}\n\n {mat}")
 
@@ -134,9 +140,12 @@ class Vector():
     def Gen3dRotation(self,mat,center,return_new = True):
         origElems = copy.copy(self.elems)
         self.elems = [self[i]-center[i] for i in range(len(self))]
+
         transformation = self.applyTransformation(mat)
         self.elems = [center[i]+transformation[i] for i in range(len(self))]
         rotated = self.elems
+
+
         self.elems = origElems if return_new else self.elems
         return self if not return_new else Vector(*rotated)
 
@@ -215,6 +224,7 @@ class Matrix():
 
         elif type(twoDList[0]) == Vector:
             self.mat = twoDList
+            self.npMAT = Matrix.GenerateNpMat(twoDList)
             assert reduce((lambda x,y: x and y), [(type(each) == Vector) for each in twoDList])
 
         else:
@@ -275,3 +285,9 @@ class Matrix():
             rMat = np.c_[nMat[:,:i],nMat[:,i+1:]]
             det += pow(-1,1+i+1) * num * self.calcDeterminent(rMat)
         return det
+
+    @staticmethod
+    def GenerateNpMat(twoDList):
+        return np.array([each.elems for each in twoDList]).T
+
+
