@@ -7,7 +7,7 @@
 ## the rays are ofc used to calculate which is the nearest point of deflection, the force nearestpoint - self.pos is perpendicular to the side of the shape.
 
 import pygame,random,math,time,copy,sys, numpy as np
-from seein import Vector, Matrix
+from Linalg import Vector, Matrix
 from vf import DiffRootVector
 from exp import Boid
 from pygame.locals import *
