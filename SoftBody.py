@@ -355,37 +355,6 @@ def getSticks(Mesh):
 	return sticks
 
 
-def DrawCircularPath(r,pos,shapeSides = 20,animate=True):
-	global boundries,landMarks,numlandMarks
-	i = 0
-	increments = 360/shapeSides
-	x1,y1 = pos.x+r,pos.y
-	ps = [Particle(Vector(x1,y1))]
-	center = Particle(Vector(pos.x,pos.y))
-	sticks = []
-	while i < 360:
-		i += increments
-		noise = 0
-		x2 = pos.x+(r+noise)*math.cos(math.radians(-i))
-		y2 = pos.y+(r+noise)*math.sin(math.radians(-i))
-		p = Particle(Vector(x2,y2)) if i < 360 else ps[0]
-		sticks.append(Stick(p, ps[-1]))
-		if i < 360:
-			ps.append(p)
-
-		if animate:
-			pygame.draw.line(screen,(255,255,255),(x1,y1),(x2,y2),2)
-			clock.tick(10)
-			pygame.display.update()
-			CheckEvent()
-		x1,y1 = x2,y2
-
-	sticks.append(Stick(center,ps[0]))
-	for i in range(0,len(ps),2):
-		sticks.append(Stick(center,ps[i]))
-	ps.append(center)
-	return (ps, sticks)
-
 
 
 ps = GetMesh()
