@@ -1,6 +1,5 @@
 from Linalg import Vector, Matrix
 import math,pygame,time,random,numpy as np,sys
-from exp import Boid
 run = True
 w,h = 1200,780
 scale = 20 ## CONTROLS THE SPACING FOR NUMBERS ON THE NUMBERLINE(yk it's like the scale of zoom), 1 = 1 number per pixel on x and y axes, 2 = 1 number per 2 pixels
