@@ -5,7 +5,7 @@ from scipy import special
 from sklearn.datasets import load_breast_cancer
 
 class Dual():
-	def __init__(self,re,eps=0,requires_grad=False,leaf_nodes=[]):
+	def __init__(self,re,eps=0,requires_grad=False):
 		self.re = np.array(re)
 		self.eps = np.array(eps)
 		self.requires_grad=requires_grad
