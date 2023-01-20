@@ -1,7 +1,8 @@
+##trajectory calculation in 8 ball pool
+
 import pygame,random,math,time,copy,sys,threading, numpy as np
 from pygame.locals import *
-from seein import Vector, Matrix
-from exp import Boid
+from Linalg import Vector, Matrix
 from coloptimization import *
 
 run = True
