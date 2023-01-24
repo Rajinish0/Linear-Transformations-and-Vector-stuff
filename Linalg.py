@@ -28,7 +28,7 @@ class Vector():
     def y(self,val):
         self.elems[1] = val
     @z.setter
-    def z(self):
+    def z(self,val):
         self.elems[2] = val
 
 
@@ -52,23 +52,41 @@ class Vector():
 
     def __add__(self,b):
         if not isinstance(b,Vector):
-            raise Exception("Gotta be a vector hombre {}".format(b))
+            raise Exception("Gotta be a vector {}".format(b))
         try:
             return Vector(*[(self[i] + b[i]) for i in range(len(self))])
         except:
-            raise Exception("dims don't match man {}d and {}d".format(len(self),len(b)))
+            raise Exception("dims don't match {}d and {}d".format(len(self),len(b)))
+
+    def __iadd__(self, b):
+        if not isinstance(b,Vector):
+            raise Exception("Gotta be a vector {}".format(b))
+        try:
+            self.elems = [(self[i] + b[i]) for i in range(len(self))]
+        except:
+            raise Exception("dims don't match {}d and {}d".format(len(self),len(b)))
+        return self
+
+    def __isub__(self, b):
+        return self.__iadd__(-b)
+
+    def __imul__(self, v):
+        self.elems = [v*(each) for each in self.elems]
+        return self
+
 
 
     def applyTransformation(self,mat,return_new=False):
         if not isinstance(mat,Matrix):
-            raise Exception('ffs man, necessito un matrix.')
+            raise Exception('need a matrix.')
         try:
             if len(mat) != len(self.elems):
                 raise Exception;
 
             return Vector(*list((mat.npMAT@self.npV)[:,0]))
+            # return Vector(*[mat[i].dot(self) for i in range(mat.shape[1])])
             # return (reduce(lambda x,y :x+y,[(mat[i]*self[i]) for i in range(len(self))]))
-        except:
+        except Exception as err:
             raise Exception(f"{len(self)}d vector with a {len(mat[0])}x{len(mat)} Matrix, '\n\n' {self}\n\n {mat}")
 
         # self.elems = transformed.elems if not return_new else self.elems
@@ -77,7 +95,7 @@ class Vector():
 
     def elem_product(self,b):
         if not isinstance(b,Vector):
-            raise Exception('nvm too tired to write this') 
+            raise Exception('need a vector') 
         return Vector(*[self[i]*b[i] for i in range(len(self))])
 
 
@@ -95,10 +113,11 @@ class Vector():
         return np.angle(np.array([complex(norm.x,norm.y)]),deg)[0]
 
     ##2D rotation
-    def rotate(self,center,angle):
+    def rotate(self,center,angle,return_new=False):
         '''can define a rotation matrix for this um [[cosx, -sinx],
                                                      [sinx,cosx]] * [[x]]
                                                                      [y]]'''
+        elemsOrig = self.elems[:]
         self.elems = [self[i]-center[i] for i in range(len(self))]
         #newX = self.x*math.cos(math.radians(angle)) - self.y*math.sin(math.radians(angle))
         #newY = self.y*math.cos(math.radians(angle)) + self.x*math.sin(math.radians(angle))
@@ -106,7 +125,9 @@ class Vector():
                                 [math.sin(math.radians(angle)),math.cos(math.radians(angle))]])
         transformation = self.applyTransformation(rotationMatrix)
         self.elems = [center[i]+transformation[i] for i in range(len(self))]
-        return self
+        returnElems = self.elems[:]
+        self.elems = elemsOrig if return_new else returnElems
+        return Vector(*returnElems)
 
 
     def RotationOnX(self,angle):
@@ -130,12 +151,55 @@ class Vector():
         return m
 
     ##3D rotations
+    def rotation(self, angle, center, axis='x', return_new=True, rotateCenter=True):
+        if type(axis) == Vector:
+            return self.RotationAboutAxis(angle, center, axis, return_new, rotateCenter)
+        elif axis == 'x':
+            return self.RotationX(angle, center, return_new)
+        elif axis == 'y':
+            return self.RotationY(angle, center, return_new)
+        elif axis == 'z':
+            return self.RotationZ(angle, center, return_new)
+        else:
+            raise Exception(f'Undefined axis {axis}')
+
     def RotationX(self,angle,center,return_new=True):
-        return self.Gen3dRotation(self.RotationOnX(angle),center,return_new)
+        return self.Gen3dRotation(self.RotationOnX(angle),center,return_new) if angle != 0 else self.returnSelf(return_new)
     def RotationY(self,angle,center,return_new=True):
-        return self.Gen3dRotation(self.RotationOnY(angle),center,return_new)
+        return self.Gen3dRotation(self.RotationOnY(angle),center,return_new) if angle != 0 else self.returnSelf(return_new)
     def RotationZ(self,angle,center,return_new=True):
-        return self.Gen3dRotation(self.RotationOnZ(angle),center,return_new)
+        return self.Gen3dRotation(self.RotationOnZ(angle),center,return_new) if angle != 0 else self.returnSelf(return_new)
+    def RotationAboutAxis(self, angle, center, axis,return_new=True, rotateCenter=True):
+        if angle == 0:
+            return self.returnSelf(return_new)
+        assert len(self.elems) == 3;
+        theta = Vector(axis.z, axis.x).heading()
+        phi = Vector(np.sqrt(axis.z**2 + axis.x**2), axis.y).heading()
+        #axis = axis.elem_product(Vector(0, -1,-1))
+        # theta = math.atan(axis.x/axis.z)*180/math.pi if not axis.z == 0 else 90*(-1 if axis.x < 0 else 1)
+        # phi = math.atan(axis.y/np.sqrt(axis.z**2 + axis.x**2))*180/math.pi if not (axis.z == 0 and axis.x == 0) else 90*(-1 if axis.y < 0 else 1)
+        theta = 0 if (axis.x == 0 and axis.z == 0) else theta
+
+        if rotateCenter:
+            center = center.RotationY(theta, Vector(0,0,0), return_new=True)
+            center.RotationX(phi,Vector(0,0,0), return_new=False)
+            # center = center.Gen3dRotation(self.RotationOnY(-theta), Vector(0,0,0), return_new=True)
+            # center = center.Gen3dRotation(self.RotationOnX(-phi), Vector(0,0,0), return_new=True)
+
+        v = self.RotationY(theta, Vector(0,0,0), return_new)
+        v = v.RotationX(phi, Vector(0,0,0), return_new)
+        # print(axis.rotation(-theta,Vector(0,0,0)).rotation(-phi, Vector(0,0,0)), theta, phi)
+
+        v = v.RotationZ(angle, center, return_new)
+
+        v = v.RotationX(-phi, Vector(0,0,0), return_new)
+        v = v.RotationY(-theta, Vector(0,0,0), return_new)
+        return v
+
+
+
+    def returnSelf(self,return_new):
+        return Vector(*self.elems) if return_new else self
 
     def Gen3dRotation(self,mat,center,return_new = True):
         origElems = copy.copy(self.elems)
@@ -157,7 +221,7 @@ class Vector():
 
     def __mul__(self,scl):
         if isinstance(scl,Vector):
-            return self.dot(b)
+            return self.dot(scl)
         return Vector(*[self[i]*scl for i in range(len(self))])
 
     def __rmul__(self,scl):
@@ -176,6 +240,11 @@ class Vector():
 
     def __eq__(self,other):
         return reduce(lambda x,y: x and y, [self[i] == other[i] for i in range(len(self))]) if other is not None else False
+
+    def __neg__(self):
+        return Vector(*[-each for each in self.elems])
+        #self.elems = [-each for each in self.elems]
+        return self
 
 
     @staticmethod
@@ -228,7 +297,7 @@ class Matrix():
             assert reduce((lambda x,y: x and y), [(type(each) == Vector) for each in twoDList])
 
         else:
-            raise Exception(f'wdf are you sending me. {type(twoDList[0])}')
+            raise Exception(f'invalid. {type(twoDList[0])}')
 
 
     @property
@@ -255,7 +324,7 @@ class Matrix():
         return len(self.mat)
     
     def inv(self):
-        return np.linalg.inv(self.npMAT)
+        return Matrix(np.linalg.inv(self.npMAT))
 
     def applyTransformation(self,mat):
         if type(mat) != Matrix:
@@ -263,7 +332,7 @@ class Matrix():
         try:
             return Matrix([self[i].applyTransformation(mat) for i in range(len(self))])
         except:
-            raise Exception(f"{len(self)}x{len(self[0])} with {len(mat)}x{len(mat[0])}, you loco man.")
+            raise Exception(f"{len(self)}x{len(self[0])} with {len(mat)}x{len(mat[0])}.")
 
 
 
@@ -272,7 +341,7 @@ class Matrix():
         assert type(mat) == np.ndarray
 
         if not reduce(lambda x,y: x == y, [each for each in mat.shape]):
-            raise Exception(f"NOT A SQUARE MATRIX, PUTA MADRE. SHAPE: {mat.shape}")
+            raise Exception(f"NOT A SQUARE MATRIX: {mat.shape}")
 
         if len(mat[0]) == 1:
             return mat.item()
@@ -289,5 +358,3 @@ class Matrix():
     @staticmethod
     def GenerateNpMat(twoDList):
         return np.array([each.elems for each in twoDList]).T
-
-
