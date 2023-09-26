@@ -1,8 +1,7 @@
 import pygame,random,math,time,copy,sys,threading, numpy as np
 from pygame.locals import *
-from seein import Vector, Matrix
+from Linalg import Vector, Matrix
 from vf import DiffRootVector
-from exp import Boid
 
 class Particle():
 	def __init__(self,pos=None):
